@@ -1,0 +1,6 @@
+@WAD.CODEBASE._00016643_HostAddress = http://localhost:5253
+
+GET {{WAD.CODEBASE._00016643_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
