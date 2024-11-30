@@ -14,6 +14,14 @@ namespace WAD.CODEBASE._00016643.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<Category>()
+                .HasIndex(c => c.CategoryName)
+                .IsUnique();
+
+            modelBuilder.Entity<Category>()
+                .Property(c => c.CategoryName)
+                .HasMaxLength(100)
+                .IsRequired();
         }
     }
 }
