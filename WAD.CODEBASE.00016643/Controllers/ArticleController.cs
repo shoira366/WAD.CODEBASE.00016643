@@ -39,7 +39,7 @@ namespace WAD.CODEBASE._00016643.Controllers
             return foundArticle != null ? Ok(foundArticle) : NotFound();
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("ignore/{id}")]
         [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetArticle(int id)
         {

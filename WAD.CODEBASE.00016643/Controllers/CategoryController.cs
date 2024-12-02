@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WAD.CODEBASE._00016643.Data;
+using WAD.CODEBASE._00016643.DTOs;
 using WAD.CODEBASE._00016643.Models;
 
 namespace WAD.CODEBASE._00016643.Controllers
@@ -36,9 +37,21 @@ namespace WAD.CODEBASE._00016643.Controllers
         // POST: api/Category
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        public async Task<IActionResult> Create(Category category)
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Create(CategoryDto dto)
         {
-            await _context.Categories.AddAsync(category);
+            if(!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            if(await _context.Categories.AnyAsync(c => c.CategoryName == dto.Name))
+            {
+                return Conflict(new { message = "A category with this name already exists." });
+            }
+
+            var category = new Category { CategoryName = dto.Name };
+            _context.Categories.Add(category);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetById), new { id = category.CategoryId }, category);

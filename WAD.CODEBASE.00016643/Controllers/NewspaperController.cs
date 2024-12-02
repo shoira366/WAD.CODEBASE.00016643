@@ -34,7 +34,7 @@ namespace WAD.CODEBASE._00016643.Controllers
             return foundNewspaper != null ? Ok(foundNewspaper) : NotFound();
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("ignore/{id}")]
         [ApiExplorerSettings(IgnoreApi =true)]
         public async Task<IActionResult> GetNewspaper(int id)
         {
