@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WAD.CODEBASE._00016643.Data;
 using WAD.CODEBASE._00016643.DTOs;
 using WAD.CODEBASE._00016643.Models;
+using WAD.CODEBASE._00016643.Repositories;
 
 namespace WAD.CODEBASE._00016643.Controllers
 {
@@ -10,18 +11,20 @@ namespace WAD.CODEBASE._00016643.Controllers
     [Route("api/[controller]")]
     public class CategoryController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly CategoryRepository _repository;
+        // private readonly ApplicationDbContext _context;
 
-        public CategoryController(ApplicationDbContext context)
+        public CategoryController(CategoryRepository repository)
         {
-            _context = context;
+           _repository = repository;
         }
 
         // GET: api/Category
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Category>>> GetAll()
         {
-            return await _context.Categories.ToArrayAsync();
+            var categories = await _repository.GetAllAsync();
+            return Ok(categories);
         }
 
         // GET: api/Category/1
@@ -30,7 +33,7 @@ namespace WAD.CODEBASE._00016643.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetById(int id)
         {
-            var foundCategory = await _context.Categories.FindAsync(id);
+            var foundCategory = await _repository.GetByIdAsync(id);
             return foundCategory != null ? Ok(foundCategory) : NotFound();
         }
 
@@ -45,14 +48,13 @@ namespace WAD.CODEBASE._00016643.Controllers
                 return BadRequest(ModelState);
             }
 
-            if(await _context.Categories.AnyAsync(c => c.CategoryName == dto.Name))
+            if(await _repository.CategoryExistsByNameAsync(dto.Name))
             {
-                return Conflict(new { message = "A category with this name already exists." });
+                return Conflict(new { message = "A category with this name already exists" });
             }
 
             var category = new Category { CategoryName = dto.Name };
-            _context.Categories.Add(category);
-            await _context.SaveChangesAsync();
+            await _repository.CreateAsync(category);
 
             return CreatedAtAction(nameof(GetById), new { id = category.CategoryId }, category);
         }
@@ -63,10 +65,13 @@ namespace WAD.CODEBASE._00016643.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Update(int id, Category category)
         {
-            if (id != category.CategoryId) return BadRequest();
-            _context.Entry(category).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            if(await _repository.CategoryExistsByNameAsync(category.CategoryName))
+            {
+                return Conflict(new { message = "A category with this name already exists" });
+            }
 
+            if (id != category.CategoryId) return BadRequest();
+            await _repository.UpdateAsync(category);
             return NoContent();
         }
 
@@ -76,11 +81,10 @@ namespace WAD.CODEBASE._00016643.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(int id)
         {
-            var foundCategory = await _context.Categories.FindAsync(id);
+            var foundCategory = await _repository.GetByIdAsync(id);
             if(foundCategory == null) return NotFound();
 
-            _context.Categories.Remove(foundCategory);
-            await _context.SaveChangesAsync();
+            await _repository.DeleteAsync(foundCategory);
             return NoContent();
         }
     }

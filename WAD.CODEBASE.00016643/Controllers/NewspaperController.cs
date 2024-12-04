@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WAD.CODEBASE._00016643.Data;
 using WAD.CODEBASE._00016643.Models;
+using WAD.CODEBASE._00016643.Repositories;
 
 namespace WAD.CODEBASE._00016643.Controllers
 {
@@ -10,18 +11,20 @@ namespace WAD.CODEBASE._00016643.Controllers
     [Route("api/[controller]")]
     public class NewspaperController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly NewspaperRepository _repository;   
+        // private readonly ApplicationDbContext _context;
 
-        public NewspaperController(ApplicationDbContext context)
+        public NewspaperController(NewspaperRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
         // GET: api/Newspapaer
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Newspaper>>> GetAll()
+        public async Task<ActionResult> GetAll()
         {
-            return await _context.Newspapers.Include(n => n.Articles).ToListAsync();
+            var newspapers = await _repository.GetAllAsync();
+            return Ok(newspapers);
         }
 
         // GET: api/Newspaper/5
@@ -30,7 +33,7 @@ namespace WAD.CODEBASE._00016643.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetById(int id)
         {
-            var foundNewspaper = await _context.Newspapers.Include(n => n.Articles).FirstOrDefaultAsync(n => n.NewspaperId == id);
+            var foundNewspaper = await _repository.GetByIdAsync(id);
             return foundNewspaper != null ? Ok(foundNewspaper) : NotFound();
         }
 
@@ -38,7 +41,7 @@ namespace WAD.CODEBASE._00016643.Controllers
         [ApiExplorerSettings(IgnoreApi =true)]
         public async Task<IActionResult> GetNewspaper(int id)
         {
-            var foundNewspaper = await _context.Newspapers.FindAsync(id);
+            var foundNewspaper = await _repository.GetNewspaper(id);
             return foundNewspaper != null ? Ok(foundNewspaper) : NotFound();
         }
 
@@ -47,8 +50,7 @@ namespace WAD.CODEBASE._00016643.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<IActionResult> Create(Newspaper newspaper)
         {
-            await _context.Newspapers.AddAsync(newspaper);
-            await _context.SaveChangesAsync();
+            await _repository.CreateAsync(newspaper);
 
             return CreatedAtAction(nameof(GetNewspaper), new { id = newspaper.NewspaperId }, newspaper);
         }
@@ -60,8 +62,7 @@ namespace WAD.CODEBASE._00016643.Controllers
         public async Task<IActionResult> Update(int id, Newspaper newspaper)
         {
             if (id != newspaper.NewspaperId) return BadRequest();
-            _context.Entry(newspaper).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            await _repository.UpdateAsync(newspaper);
 
             return NoContent();
         }
@@ -72,11 +73,10 @@ namespace WAD.CODEBASE._00016643.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(int id)
         {
-            var newspaperToDelete = await _context.Newspapers.FindAsync(id);
+            var newspaperToDelete = await _repository.GetNewspaper(id);
             if (newspaperToDelete == null) return NotFound();
 
-            _context.Newspapers.Remove(newspaperToDelete);
-            await _context.SaveChangesAsync();
+            await _repository.DeleteAsync(newspaperToDelete);
             return NoContent();
         }
     }

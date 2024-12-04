@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WAD.CODEBASE._00016643.Data;
 using WAD.CODEBASE._00016643.Models;
+using WAD.CODEBASE._00016643.Repositories;
 
 namespace WAD.CODEBASE._00016643.Controllers
 {
@@ -10,19 +11,23 @@ namespace WAD.CODEBASE._00016643.Controllers
     [Route("api/[controller]")]
     public class ArticleController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IRepository<Article> _repository;
+        private readonly NewspaperRepository _newspaperRepository;
+        // private readonly ApplicationDbContext _context;
 
-        public ArticleController(ApplicationDbContext context)
+        public ArticleController(IRepository<Article> repository, NewspaperRepository newspaperRepository)
         {
-            _context = context;
+            _repository = repository;
+            _newspaperRepository = newspaperRepository;
         }
 
 
         // GET: api/Article
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Article>>> GetAll()
+        public async Task<ActionResult> GetAll()
         {
-            return await _context.Articles.Include(a => a.Newspaper).Include(a => a.Category).ToListAsync();
+            var articles = await _repository.GetAllAsync();
+            return Ok(articles);
         }
 
         // GET: api/Article/1
@@ -31,37 +36,33 @@ namespace WAD.CODEBASE._00016643.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> GetById(int id)
         {
-            var foundArticle = await _context.Articles
-                .Include(a => a.Newspaper)
-                .Include(a => a.Category)
-                .FirstOrDefaultAsync(a => a.ArticleId == id);
+            var foundArticle = await _repository.GetByIdAsync(id);
 
             return foundArticle != null ? Ok(foundArticle) : NotFound();
         }
 
-        [HttpGet("ignore/{id}")]
+        /*[HttpGet("ignore/{id}")]
         [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<IActionResult> GetArticle(int id)
         {
-            var foundArticle = await _context.Articles.FindAsync(id);
+            var foundArticle = await _repository.GetArticle(id);
             return foundArticle != null ? Ok(foundArticle) : NotFound();
-        }
+        }*/
 
         // POST: api/Article
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<IActionResult> Create(Article article)
         {
-            var newspaper = await _context.Newspapers.FindAsync(article.NewspaperId);
+            var newspaper = await _newspaperRepository.GetNewspaper(article.NewspaperId);
             if (newspaper == null)
             {
                 return NotFound(new { error = "Newspaper not found." });
             }
 
-            _context.Articles.Add(article);
-            await _context.SaveChangesAsync();
+           await _repository.CreateAsync(article);
 
-            return CreatedAtAction(nameof(GetArticle), new { id = article.ArticleId }, article);
+            return CreatedAtAction(nameof(GetById), new { id = article.ArticleId }, article);
         }
 
         // PUT: api/Article/2
@@ -71,8 +72,7 @@ namespace WAD.CODEBASE._00016643.Controllers
         public async Task<IActionResult> Update(int id, Article article)
         {
             if (id != article.ArticleId) return BadRequest();
-            _context.Entry(article).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+            await _repository.UpdateAsync(article);
 
             return NoContent();
         }
@@ -83,11 +83,10 @@ namespace WAD.CODEBASE._00016643.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(int id)
         {
-            var articleToDelete = await _context.Articles.FindAsync(id);
+            var articleToDelete = await _repository.GetByIdAsync(id);
             if (articleToDelete == null) return NotFound();
 
-            _context.Articles.Remove(articleToDelete);
-            await _context.SaveChangesAsync();
+            await _repository.DeleteAsync(articleToDelete);
             return NoContent();
         }
 
